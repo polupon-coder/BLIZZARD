@@ -1442,7 +1442,7 @@ for (const [modelo, dx, z, tam, giro, hunde, inclina] of [
   [gAnilloP, -0.3, -38, 8, 0.2, 0.3, 0.3],   // (sobre el paso, poco inclinado: se pasa por dentro)
   [gAnilloP, 9, -662, 11, -0.5, 0.38, -0.6], [gAnilloP, -10, -722, 10, 0.9, 0.32, 0.28]])   // (otro en las dunas, más erguido)
   { const g = pieza(modelo, caminoX(z) + dx, z, tam, giro, hunde, inclina);
-    if (modelo === gAnilloP) { ARCANOS.push({ x: caminoX(z) + dx, z, r: tam * 0.6 }); g.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.color.setRGB(0.72, 0.75, 0.82); } }); }   // (el anillo: su textura tira a amarillo)
+    if (modelo === gAnilloP) { ARCANOS.push({ x: caminoX(z) + dx, z, r: tam * 0.5 }); g.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.color.setRGB(0.72, 0.75, 0.82); } }); }   // (el anillo: su textura tira a amarillo)
     else g.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.color.multiplyScalar(0.84); } }); }   // (algo más oscuras: la nieve de encima tiraba a azul)
 
 // ─── Tras las ruedas: plataforma antigua, acantilado de columnas con su escalera, campo de columnas ───
@@ -1859,9 +1859,10 @@ function moverGuia(dt) {
     if (!G.huella && G.z < H2.z + 1 && Math.abs(pos.z - H2.z) < 9) { G.modo = "huella"; G.t = 0; G.huella = true; }
     // Si te quedas quieto un rato o te desvías, vuelve a rodearte y a guiarte.
     G.quieto = Math.hypot(vel.x, vel.z) < 0.3 ? G.quieto + dt : 0;
-    if (!llega && (G.quieto > 5 || Math.abs(pos.x - caminoX(pos.z)) > 7 || delante > 18)) { G.modo = "vuelta"; G.t = 0; }
+    const dB = Math.hypot(pos.x - bast.x, pos.z - bast.z), perdido = llega && dB > 9;   // (se ha pasado el bastón o se ha alejado de él)
+    if ((!llega || perdido) && (G.quieto > 3 || Math.abs(pos.x - caminoX(pos.z)) > 5 || (!llega && delante > 14) || (perdido && G.p.distanceTo(pos) > 6))) { G.modo = "vuelta"; G.t = 0; }   // (siempre te viene a buscar si te paras, te desvías o te pasas)
     if (!llega && delante < 7) G.z -= dt * 4.2;
-    const objetivo = llega ? bast : puntoGuia(G.z, _gp);
+    const objetivo = llega ? (perdido ? _gp.set(bast.x - pos.x, 0, bast.z - pos.z).normalize().multiplyScalar(3.2).add(pos).setY(pos.y + 1.3) : bast) : puntoGuia(G.z, _gp);   // (perdido: se pone por delante, hacia el bastón, y te lleva)
     if (!llega) { objetivo.x += Math.sin(G.reloj * 2.6) * 0.6; objetivo.y += Math.sin(G.reloj * 5.2) * 0.12; }   // (avanza haciendo eses, como una serpiente)
     G.p.lerp(objetivo, 1 - Math.exp(-dt * (llega ? 2 : 6)));
     if (llega && G.p.distanceTo(bast) < 0.3 && Math.hypot(pos.x - bast.x, pos.z - bast.z) < 12) G.fin = Math.min(1, G.fin + dt * 1.5);   // se convierte en la espiral del bastón
@@ -2974,6 +2975,7 @@ const puzle = (() => {
     const metas4 = [0, 1, 2, 3].map(() => NOMBRES[Math.floor(rnd4() * 4)]);
     const bloques = [0, 1, 2, 3].map(k => {
       const b = bloque(orden(), false);   // (sin gorro de nieve: al caer, brillaba)
+      b.m.traverse(o => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(m => { const c = m.clone(); c.userData.sinNieve = true; return c; }) : (() => { const c = o.material.clone(); c.userData.sinNieve = true; return c; })(); });   // (y sin la nieve de encima: tumbada, quedaba en un costado)
       b.m.position.y = 0.8 + k * 1.59; b.m.rotation.z = (rnd4() - 0.5) * 0.02; g.add(b.m);
       b.rot = Math.floor(rnd4() * 4); b.ang = b.rot * Math.PI / 2; b.m.rotation.y = b.ang;
       return b;
@@ -3526,7 +3528,7 @@ function colocarBaston(dt, v) {
   luzBaston(dt);
   if (!bastonEnMano) return;
   centroDelPuno(_puno);
-  const objetivo = clamp(0.2 + v / V_CORRER * 0.4, 0.2, 0.6) + (enSuelo ? 0 : 0.25);
+  const objetivo = agachadoAhora ? 1.25 : clamp(0.2 + v / V_CORRER * 0.4, 0.2, 0.6) + (enSuelo ? 0 : 0.25);   // (agachado, el bastón casi tumbado hacia delante: que no atraviese el techo bajo)
   inclinacionBaston = lerp(inclinacionBaston, objetivo, 1 - Math.exp(-dt * 8));
   baston.rotation.set(inclinacionBaston, rumbo, 0.14, "YXZ");  // punta hacia delante y algo hacia fuera
   _eje.set(0, 1, 0).applyEuler(baston.rotation);
@@ -4350,17 +4352,17 @@ const musica = (() => {
   // Cuánto se oye el viento de la niebla (0 a 1): sube y baja despacio.
   function niebla(nivel) { if (!ctx || !gAmb) return; nivel = Math.round(nivel * 50) / 50; if (nivel === nivelAmb) return; nivelAmb = nivel; gAmb.gain.setTargetAtTime(nivel * 0.55, ctx.currentTime, 1.2); if (nivel > 0 && ambiente.paused) ambiente.play().catch(() => {}); }
   // El acorde de piano al aprender una runa (al completar su trazo).
-  function acorde() { if (!ctx || !acordeB) return; const f = ctx.createBufferSource(), g = ctx.createGain(); f.buffer = acordeB; g.gain.value = 0.6; f.connect(g).connect(ctx.destination); f.start(); }
+  function acorde() { if (!ctx || !acordeB) return; const f = ctx.createBufferSource(), g = ctx.createGain(); f.buffer = acordeB; f.playbackRate.value = 0.84; g.gain.value = 0.42; f.connect(g).connect(ctx.destination); f.start(); }
   // Al recoger una chispa: las campanillas y, encima, el arpegio de piano una octava más alto, en una escala
   // que sube con cada chispa del tramo (la séptima, la más alta); cada vez con un leve matiz distinto.
   const ESCALA = [1, 1.1225, 1.2599, 1.4983, 1.6818, 2, 2.2449];
   function arpegio(paso = 0) { if (!ctx) return; const r = ESCALA[Math.max(0, Math.min(6, paso))] * (0.985 + Math.random() * 0.03);
-    if (arpegioB) { const f = ctx.createBufferSource(), g = ctx.createGain(); f.buffer = arpegioB; f.playbackRate.value = r * 0.63; g.gain.value = 0.42; f.connect(g).connect(ctx.destination); f.start(); }
-    if (impulsoB) { const f = ctx.createBufferSource(), g = ctx.createGain(); f.buffer = impulsoB; f.playbackRate.value = r * 1.26; g.gain.value = 0.16; f.connect(g).connect(ctx.destination); f.start(ctx.currentTime + 0.05); } }
+    if (arpegioB) { const f = ctx.createBufferSource(), g = ctx.createGain(); f.buffer = arpegioB; f.playbackRate.value = r * 0.53; g.gain.value = 0.3; f.connect(g).connect(ctx.destination); f.start(); }
+    if (impulsoB) { const f = ctx.createBufferSource(), g = ctx.createGain(); f.buffer = impulsoB; f.playbackRate.value = r * 1.06; g.gain.value = 0.11; f.connect(g).connect(ctx.destination); f.start(ctx.currentTime + 0.05); } }
   // El acorde disonante al caerse (cuando el viento te recoge).
   function caida() { if (!ctx || !caidaB) return; const f = ctx.createBufferSource(), g = ctx.createGain(); f.buffer = caidaB; g.gain.value = 0.55; f.connect(g).connect(ctx.destination); f.start(); }
   // La nota de piano con soplo: para los momentos especiales (un puzle resuelto, el bastón, la puerta…).
-  function especial() { if (!ctx || !soploB) return; const f = ctx.createBufferSource(), g = ctx.createGain(); f.buffer = soploB; g.gain.value = 0.55; f.connect(g).connect(ctx.destination); f.start(); }
+  function especial() { if (!ctx || !soploB) return; const f = ctx.createBufferSource(), g = ctx.createGain(); f.buffer = soploB; f.playbackRate.value = 0.84; g.gain.value = 0.4; f.connect(g).connect(ctx.destination); f.start(); }
   // La nota desafinada cuando el viento avisa de que por ahí no se sigue (como mucho, una vez cada pocos segundos).
   function aviso() { if (!ctx || !avisoB || ctx.currentTime - avisoT < 4) return; avisoT = ctx.currentTime; const f = ctx.createBufferSource(), g = ctx.createGain(); f.buffer = avisoB; g.gain.value = 0.45; f.connect(g).connect(ctx.destination); f.start(); }
   // El contrabajo, flojito, en cada salto normal.
@@ -4374,9 +4376,9 @@ const musica = (() => {
     if (!b) { if (vol <= 0.001) return; const f = ctx.createBufferSource(), g = ctx.createGain(); f.buffer = rodarB; f.loop = true; g.gain.value = 0; f.connect(g).connect(ctx.destination); f.start(); b = { f, g, v: 0 }; bucles.set(nombre, b); }
     if (Math.abs(vol - b.v) > 0.01) { b.v = vol; b.g.gain.setTargetAtTime(vol, ctx.currentTime, 0.2); } b.f.playbackRate.value = ritmo; }
   // Unas notas de piano que suben con el salto con viento (cada vez en un tono algo distinto, siempre consonante).
-  function impulso() { if (!ctx || !impulsoB) return; const f = ctx.createBufferSource(), g = ctx.createGain(); f.buffer = impulsoB; f.playbackRate.value = [1, 1.1225, 1.2599, 0.8909][Math.floor(Math.random() * 4)]; g.gain.value = 0.28; f.connect(g).connect(ctx.destination); f.start(); }
+  function impulso() { if (!ctx || !impulsoB) return; const f = ctx.createBufferSource(), g = ctx.createGain(); f.buffer = impulsoB; f.playbackRate.value = 0.84 * [1, 1.1225, 1.2599, 0.8909][Math.floor(Math.random() * 4)]; g.gain.value = 0.2; f.connect(g).connect(ctx.destination); f.start(); }
   // Aviso de chispa dejada atrás: el timbre de la chispa en dos notas a medio tono (disonante), grave y suave.
-  function disonante() { if (!ctx || !arpegioB) return; for (const [r, v, d] of [[0.42, 0.3, 0], [0.445, 0.26, 0.04]]) { const f = ctx.createBufferSource(), g = ctx.createGain(); f.buffer = arpegioB; f.playbackRate.value = r; g.gain.value = v; f.connect(g).connect(ctx.destination); f.start(ctx.currentTime + d); } }
+  function disonante() { if (!ctx || !arpegioB) return; for (const [r, v, d] of [[0.353, 0.21, 0], [0.374, 0.18, 0.04]]) { const f = ctx.createBufferSource(), g = ctx.createGain(); f.buffer = arpegioB; f.playbackRate.value = r; g.gain.value = v; f.connect(g).connect(ctx.destination); f.start(ctx.currentTime + d); } }
   return { empezar, viento, niebla, cancion, acorde, arpegio, caida, especial, aviso, salto, rocas, golpe, bucle, impulso, disonante };
 })();
 
@@ -4477,7 +4479,7 @@ let abrePuertas = false, aprende = "", giraBloques = false, avisoPuzle = false, 
 const _espArena = new THREE.Vector3(), _puntaEsp = new THREE.Vector3(), salidaEsp = { obj: null, pos: null, t: 1 };
 let muevePiedras = false, avisoPenascos = false, gesto = 0, llevando = null, espiralTam = null;
 let NIEBLA_LEJOS = 19, enTunel = 0, anteLaPuerta = 0, enPlat = 0;
-let atrasT = 0, alanteT = 0, vueltaCam = false, vueltaP = 0, vueltaLado = 1, vueltaDesde = -9, bloqueoControl = false, yawControl = Math.PI;   // (correr hacia atrás: la cámara da la vuelta y sigue)
+let orbitaT = -1, atrasT = 0, alanteT = 0, vueltaCam = false, vueltaP = 0, vueltaLado = 1, vueltaDesde = -9, bloqueoControl = false, yawControl = Math.PI;   // (correr hacia atrás: la cámara da la vuelta y sigue)
 let yawCamara = Math.PI, giroCam = 0, tIntro = 0, quietoDesde = 0, cerca = 0, escalon = 0, alturaVisual = 0;
 let escalonDura = 0.45, escalonAlto = 0.3, escalonDesde = 0, yVis = null, tAire = 0, ultimoEscalon = -9;
 const INTRO_DURA = 8;
@@ -4556,7 +4558,7 @@ function moverHorizontal(dx, dz) {
   for (const c of colisiones) {
     if (c.rampa) {                                                  // por debajo de la pilastra, empuja hacia fuera de su eje
       const q = enRampa(c, pos.x, pos.z), rr = c.rampa.ancho + 0.25;
-      if (q.d < rr && pos.y < q.y - PASO && q.d > 0.001) { pos.x = q.px + (pos.x - q.px) / q.d * rr; pos.z = q.pz + (pos.z - q.pz) / q.d * rr; }
+      if (q.d < rr && pos.y < q.y - PASO && q.d > 0.001 && !colisiones.some(k => k.bajo !== undefined && (agachadoAhora ? pos.y + 1.0 : pos.y + 1.55) <= k.bajo && Math.hypot(k.x - pos.x, k.z - pos.z) < k.r + 0.6)) { pos.x = q.px + (pos.x - q.px) / q.d * rr; pos.z = q.pz + (pos.z - q.pz) / q.d * rr; }   // (si por debajo se cabe, de pie o agachado, no empuja: era un muro invisible)
       continue;
     }
     if (c.bajo !== undefined && (agachadoAhora ? pos.y + 1.0 : pos.y + 1.55) <= c.bajo) continue;   // por debajo, agachado, se pasa
@@ -4639,8 +4641,9 @@ function actualizar(dt) {
     if (antes !== vueltaCam) { bloqueoControl = true; yawControl = yawCamara; atrasT = alanteT = 0; vueltaDesde = reloj;
       if (vueltaCam) vueltaLado = Math.sign(vel.x * c.fz - vel.z * c.fx) || vueltaLado; } }   // (gira por el lado hacia el que va; mientras se mantenga la dirección, los mandos no se dan la vuelta con la cámara)
   vueltaP = clamp(vueltaP + (vueltaCam ? dt : -dt) / 1.8, 0, 1);   // (media vuelta en ~1,8 s, suave al empezar y al acabar)
-  const yawObjetivo = Math.atan2(-c.fx, -c.fz) + giroCam + Math.PI * vueltaLado * vueltaP * vueltaP * (3 - 2 * vueltaP);
-  { const dif = Math.abs(Math.atan2(Math.sin(yawObjetivo - yawCamara), Math.cos(yawObjetivo - yawCamara))); yawCamara = lerpAngulo(yawCamara, yawObjetivo, 1 - Math.exp(-dt * (vueltaP > 0 && vueltaP < 1 ? 5 : dif > 1 ? 2.4 : 1.2))); }
+  let orbita = 0; if (orbitaT >= 0) { orbitaT += dt; const k = Math.min(1, orbitaT / 6); orbita = Math.PI * 2 * k * k * (3 - 2 * k); if (orbitaT >= 6) orbitaT = -1; }   // (al recibir el bastón: una vuelta completa, suave)
+  const yawObjetivo = Math.atan2(-c.fx, -c.fz) + giroCam + Math.PI * vueltaLado * vueltaP * vueltaP * (3 - 2 * vueltaP) + orbita;
+  { const dif = Math.abs(Math.atan2(Math.sin(yawObjetivo - yawCamara), Math.cos(yawObjetivo - yawCamara))); yawCamara = lerpAngulo(yawCamara, yawObjetivo, 1 - Math.exp(-dt * (orbitaT >= 0 || (vueltaP > 0 && vueltaP < 1) ? 5 : dif > 1 ? 2.4 : 1.2))); }
   const adelante = new THREE.Vector3(-Math.sin(yawCamara), 0, -Math.cos(yawCamara));
   const derecha = new THREE.Vector3(-adelante.z, 0, adelante.x);
   if (!bloqueoControl) yawControl = yawCamara;
@@ -4678,7 +4681,7 @@ function actualizar(dt) {
       baston.rotation.set(0.08 * viaje + Math.sin(arrodillado * 9) * 0.06 * (1 - viaje), rumbo * viaje + arrodillado * 2.5 * (1 - viaje), 0, "YXZ");
       espiralEn = baston.position.clone().add(new THREE.Vector3(0, 0.6, 0));
       efectoEspiral = 1;
-      if (t >= 1) { bastonEnMano = true; espiralEn = null; efectoEspiral = 0.8; musica.viento(0.25, 0.9); }
+      if (t >= 1) { bastonEnMano = true; espiralEn = null; efectoEspiral = 0.8; musica.viento(0.25, 0.9); orbitaT = 0; }   // (y la cámara da una vuelta entera alrededor)
     }
     if (arrodillado > 2.6) {
       if (tactil) ui.querySelector("#b-viento").hidden = false;
@@ -4720,7 +4723,7 @@ function actualizar(dt) {
     const deseo = new THREE.Vector3().addScaledVector(bloqueoControl ? adelanteC : adelante, iz).addScaledVector(bloqueoControl ? derechaC : derecha, ix);
     if (deseo.lengthSq() > 1) deseo.normalize();
     // Bajo un techo bajo se sigue agachado aunque se suelte la tecla, para no quedar dentro de la piedra.
-    const bajoTecho = colisiones.some(c => c.bajo !== undefined && Math.hypot(pos.x - c.x, pos.z - c.z) < c.r + 1.0 && pos.y < c.techo && pos.y + 1.55 > c.bajo && pos.y + 1.0 <= c.bajo);   // (se agacha solo, y solo si hace falta: un poco antes de llegar, que el techo no lo frene)
+    const bajoTecho = colisiones.some(c => c.bajo !== undefined && Math.hypot(pos.x - c.x, pos.z - c.z) < c.r + 1.0 && pos.y < c.techo && pos.y + 1.55 > c.bajo && pos.y + 1.0 <= c.bajo);   // (se agacha solo, y solo si hace falta: un poco antes de llegar, que el techo no lo frene)   // (se agacha solo, y solo si hace falta: un poco antes de llegar, que el techo no lo frene)
     const agachado = (tecla("KeyC", "ControlLeft") || bajoTecho) && enSuelo;
     agachadoAhora = agachado; if (agachado) ultimoAgachado = reloj;
     const rapidez = agachado ? V_AGACHADO : tecla("ShiftLeft", "ShiftRight") || Math.hypot(joy.x, joy.y) > 0.85 ? V_CORRER : V_ANDAR;
@@ -4820,10 +4823,13 @@ function actualizar(dt) {
 
     const xAntes = pos.x, zAntes = pos.z;
     moverHorizontal(vel.x * dt, vel.z * dt);
-    if (retenido(pos.x, pos.z) && !retenido(xAntes, zAntes)) {
-      pos.x = xAntes; pos.z = zAntes; vel.x = vel.z = 0;
-      retencion = 1;
-    }
+    // Pasos estrechos (saltos, pasos bajos, la puerta): no frena en seco (parecía un choque raro); al acercarse
+    // lo va llevando hacia el hueco y, si aun así llega desviado, lo encaja en el borde del paso sin pararlo.
+    for (const R of RETENCIONES) { const cx = caminoX(R.z) + (R.dx || 0), dz = Math.abs(pos.z - R.z), d = pos.x - cx;
+      if (Math.abs(d) > 40) continue;
+      if (dz < R.m + 3 && dz >= R.m && Math.abs(d) > R.hw - 0.2 && Math.hypot(vel.x, vel.z) > 0.3) pos.x -= Math.sign(d) * Math.min(Math.abs(d) - (R.hw - 0.2), dt * 2.2);   // (lo acerca al hueco)
+      if (retenido(pos.x, pos.z) && !retenido(xAntes, zAntes) && dz < R.m) { pos.x = cx + Math.sign(d) * (R.hw - 0.02); vel.x *= 0.3; retencion = 1; } }
+    if (retenido(pos.x, pos.z) && !retenido(xAntes, zAntes)) { pos.x = xAntes; pos.z = zAntes; vel.x = vel.z = 0; retencion = 1; }   // (por si acaso)
     vel.y -= GRAVEDAD * dt;
     pos.y += vel.y * dt;
     const s = sueloEn(pos.x, pos.z, pos.y); sobreAntes = s.sobre;
@@ -5659,8 +5665,8 @@ camara.position.set(0, pos.y + 3.6, pos.z + 7.2);
   // Rocas, pilastras, ruinas, plataformas y piedras móviles: todo lo de piedra con material estándar.
   scene.traverse(o => {
     // Los bloques de runas llevan un material por cara: cada uno, como una roca móvil.
-    if (o.isMesh && Array.isArray(o.material) && o.material.every(m => m.userData.nevada)) { for (const m of o.material) if (!hechos.has(m)) { hechos.add(m); nevar(m, m.userData.pista ? 0 : 1.05, 0, 0, 0.95, 1, m.userData.pista ? "pista" : "runas"); } return; }   // (sin igualar el tono: el suyo; las pistas, sin nieve al pie: están medio enterradas)
-    if (!o.isMesh || hechos.has(o.material) || !o.material.isMeshStandardMaterial || o.material.userData.suelo) return;
+    if (o.isMesh && Array.isArray(o.material) && o.material.every(m => m.userData.nevada) && !o.material.some(m => m.userData.sinNieve)) { for (const m of o.material) if (!hechos.has(m)) { hechos.add(m); nevar(m, m.userData.pista ? 0 : 1.05, 0, 0, 0.95, 1, m.userData.pista ? "pista" : "runas"); } return; }   // (sin igualar el tono: el suyo; las pistas, sin nieve al pie: están medio enterradas)
+    if (!o.isMesh || Array.isArray(o.material) || hechos.has(o.material) || !o.material.isMeshStandardMaterial || o.material.userData.suelo || o.material.userData.sinNieve) return;
     hechos.add(o.material); nevar(o.material, o.material.userData.polvo ? 0 : 1.05, 0, 0, o.material.userData.nevada ? 0.95 : o.material.userData.polvo || 0, 1, o.material.userData.arco || o.material.userData.polvo ? "arco" : true);   // arcos y escalones: tono de piedra liso   // las que se mueven, con nieve encima
   });
 }
@@ -5823,14 +5829,14 @@ function colisionPorForma(g, lo, hi, techo) {   // círculos pequeños donde la 
 }
 // Golems a lo lejos: siluetas en la niebla que pasan andando, lejos del camino (no se llega a ellos: si te acercas, se desvanecen).
 // Los grandes, muy lentos y más lejos; los pequeños, más cerca y más rápidos.
-const PASEANTES = [
-  { z: -650, lado: -1, d: 17, grande: true, dir: -1 }, { z: -880, lado: -1, d: 12, grande: false, dir: -1 },   /* (al principio, ninguno: aparecen ya avanzado el juego) */
-  { z: -1250, lado: 1, d: 12, grande: false, dir: -1 }, { z: -720, lado: 1, d: 12, grande: false, dir: -1 }, { z: -1065, lado: -1, d: 12, grande: false, dir: -1 }, { z: -1440, lado: 1, d: 12, grande: false, dir: -1 },
-  { z: -1040, lado: -1, d: 17, grande: true, dir: 1 }, { z: -1365, lado: 1, d: 26, grande: true, dir: -1 }];   // (dentro del alcance de la cámara: con niebla densa, unos 45 m)
+const PASEANTES = [   // (en tramos donde pueden andar sin atravesar nada: medidos; separados entre sí)
+  { z: -568, lado: -1, d: 17, grande: true, dir: -1 }, { z: -688, lado: 1, d: 12, grande: false, dir: -1 }, { z: -928, lado: -1, d: 12, grande: false, dir: -1 },
+  { z: -1228, lado: 1, d: 12, grande: false, dir: -1 }, { z: -1423, lado: 1, d: 26, grande: true, dir: -1 }];   // (dentro del alcance de la cámara: con niebla densa, unos 45 m)
 let paseantes = null;
 function pasoGolem(x, z, yP, rad) {   // ¿puede pisar ahí un golem? (ni rocas ni piezas, ni santuarios, ni simas ni agua, ni escalones)
   const y = alturaTerreno(x, z); if (y < -5 || (yP !== null && Math.abs(y - yP) > 1.2)) return null;
-  if (PLATAFORMAS.some(Q => Math.hypot(x - Q.x, z - Q.z) < Q.r + rad + 1.5)) return null;   // (ni sobre un santuario)
+  if (PLATAFORMAS.some(Q => Math.hypot(x - Q.x, z - Q.z) < Q.r + rad + 1.5) || ARCANOS.some(A => Math.hypot(x - A.x, z - A.z) < A.r + rad)) return null;   // (ni sobre un santuario, ni por un aro arcano)
+  if (ruedas.some(w => Math.abs(z - w.z) < (w.R || 2) + rad + 1) || ruedasAbismo.some(W => Math.abs(z - W.g.position.z) < 4 + rad) || rodantesEd.some(W => Math.abs(z - W.g.position.z) < W.R + rad + 1)) return null;   // (ni por donde ruedan las ruedas)
   if (colisiones.some(c => !c.rampa && c.techo > y + 1.5 && Math.hypot(c.x - x, c.z - z) < c.r + rad)) return null;
   return y;
 }
@@ -5844,7 +5850,7 @@ function cruceLibre(z0) {   // ¿puede un golem grande cruzar de lado a lado (36
   let yP = alturaTerreno(cx - 18, z0);
   for (let d = -18; d <= 18; d += 1.5) { const x = cx + d, y = alturaTerreno(x, z0);
     if (y < y0 - 5 || Math.abs(y - yP) > 1.3) return false; yP = y;   // (simas o paredes; las cuestas suaves de las dunas, sí)
-    if (colisiones.some(c => !c.rampa && c.techo > y + 2 && Math.hypot(c.x - x, c.z - z0) < c.r + 2.6) || PLATAFORMAS.some(Q => Math.hypot(x - Q.x, z0 - Q.z) < Q.r + 4)) return false; }   // (rocas, acantilados, santuarios)
+    if (colisiones.some(c => !c.rampa && c.techo > y + 2 && Math.hypot(c.x - x, c.z - z0) < c.r + 2.6) || PLATAFORMAS.some(Q => Math.hypot(x - Q.x, z0 - Q.z) < Q.r + 4) || ARCANOS.some(A => Math.hypot(x - A.x, z0 - A.z) < A.r + 2.6)) return false; }   // (rocas, acantilados, santuarios)
   return true;
 } const _siluetaG = new THREE.Color(0x56606e);
 function moverPaseantes(dt) {
@@ -6111,7 +6117,7 @@ buscarMundo({ n: -1, c: [0, 0, 0] });   // (el índice de piezas del mundo, con 
     else if (b.min.y > 2.6) { const dy = b.min.y - 2.45; o.position.y -= dy; o.updateMatrixWorld(true); for (const cc of colisiones) if (dentro(cc) && isFinite(cc.techo) && cc.techo < 90) cc.techo -= dy; }
   } }
 if (!window.BLIZZARD_EDITOR) fetch("escena.json").then(r => r.ok ? r.json() : null).then(j => { if (j && j.items) for (const it of j.items) { try { ponerEd(it); } catch (e) { console.warn("escena: no se pudo poner", it.id, e); } } }).catch(() => {}).finally(() => { escenaLista = true; });   // (una pieza que falle no corta las demás)   // (lo colocado en el editor, ya fijado en el juego)
-window.__blizzard = { chispas: () => chispas, esferas: () => esferasEd, paseantes: () => paseantes, hundidos: () => ventisqueros.reduce((a, v) => a + (v.fijo ? v.fijo.filter(f => f > 0.1).length : 0), 0), trazo, figuras: FIGURAS, ed: { chispasBase: () => { if (!chispas) chispas = crearChispas(); return chispas.map(c => ({ id: c.id, tramo: c.tramo, p: c.base.map(v => +v.toFixed(2)) })); }, MODELOS, KITS, aplicarMatEd, ponerEd, quitarEd, crearPiezaEd, firmaDe, cajaReal, unidadesMundo, cajaInstancia, firmaInstancia, sueloMat: () => MAT_SUELO, escenaEd, camara, renderer, scene, alturaTerreno, caminoX, nieblaLago, coposBajos, santuarios: [PLATAFORMA, PLATAFORMA2, PLATAFORMA3, PLATAFORMA4, PLATAFORMA5, PLATAFORMA6].map(P => P.z), hielo: HIELO, cuevaZ: PLATAFORMA7.z }, centroLago, colis: () => colisiones, hielos: () => losasHielo, TRAS, puzle, vel, pozoEn, guia: () => [guia.modo, +guia.t.toFixed(1), guia.p.toArray().map(v => +v.toFixed(1)), guia.cola[guia.cola.length - 1].p.toArray().map(v => +v.toFixed(1))], bolas: () => bolas.map(b => b.g.visible ? b.g.position.z : null), medir: () => { const t0 = performance.now(); actualizar(1 / 60); const t1 = performance.now(); ocultarTapadores(); const t2 = performance.now(); renderer.info.autoReset = false; renderer.info.reset(); if (desenfoque) desenfoque.dibujar(); else renderer.render(scene, camara); renderer.getContext().finish(); const t3 = performance.now(); const r = { logica: +(t1 - t0).toFixed(2), tapadores: +(t2 - t1).toFixed(2), dibujo: +(t3 - t2).toFixed(1), llamadas: renderer.info.render.calls, triangulos: renderer.info.render.triangles, geometrias: renderer.info.memory.geometries }; renderer.info.autoReset = true; return r; }, irSantuario: n => empezarEnSantuario(n), get giraBloques() { return giraBloques; }, get estadoJuego() { return estado; }, ventis: () => ventisqueros.map(v => [+v.cx.toFixed(1), +v.cz.toFixed(1), +v.ancho.toFixed(1)]), monticulos: () => MONTICULOS.map(m => [+m.x.toFixed(1), +m.z.toFixed(1), +m.r.toFixed(1)]), verCapa: (a, b) => { capaTela.malla.visible = a; esclavina.malla.visible = b; esclavina.malla.material.color.set(b === 2 ? 0xff00ff : 0xb88521); }, huesoMundo: n => { blizzard.updateMatrixWorld(true); return enMundo(n).toArray().map(v => +v.toFixed(3)); }, capaEstado: () => capaTela.estado(), capaRed: () => [0, 5, 66, 126, 131].map(k => [k, capaTela.P[k].toArray().map(v => +v.toFixed(2)), capaTela.A[k].toArray().map(v => +v.toFixed(2))]), capaDatos: () => { const a = capaTela.malla.geometry.attributes.position.array; return [a.length, Array.from(a.slice(0, 6)).map(v => +v.toFixed(2)), Array.from(a.slice(-3)).map(v => +v.toFixed(2)), capaTela.malla.visible, !!capaTela.malla.parent]; }, huesos: () => { blizzard.updateMatrixWorld(true); return ["Hips","Spine2","Neck","LeftShoulder","LeftArm","RightArm","LeftUpLeg","LeftFoot"].map(n => [n, ...enMundo(n).toArray().map(v => +v.toFixed(3))]); }, efectos: () => [+efectoEspiral.toFixed(2), +rachaViento.toFixed(2), !!espiralEn, estado, !!rescate], forzarAnim: n => { animForzada = n; }, pasosSalto: () => ZONA_PILASTRAS.map((z, i) => [caminoX(z) + PASO_SALTO[i], z]), rutaBosque: () => RUTA_BOSQUE.slice(), saltosBosque: () => SALTOS_BOSQUE.slice(), losas: () => losas.map(L => L.estado[0]).join(""), saltosLosas: () => SALTOS_LOSAS.slice(), pilares: () => PILARES.map(([x, z, r]) => [caminoX(z) + x, z, r]), get abrePuertas() { return abrePuertas; }, niebla: f => { NIEBLA_LEJOS = f; }, scene, probarRodilla: () => { escalonDura = 0.45; escalonAlto = 0.5; escalon = 0.3; blizzard.updateMatrixWorld(true); const a = blizzard.worldToLocal(enMundo("RightFoot")); gestoEscalon(); blizzard.updateMatrixWorld(true); const b = blizzard.worldToLocal(enMundo("RightFoot")); escalon = 0; return [a.toArray(), b.toArray()].map(v => v.map(x => +x.toFixed(2))); }, manos: () => { blizzard.updateMatrixWorld(true); const c = enMundo("Hips"); return ["LeftHand", "RightHand"].map(n => { const p = enMundo(n); return +Math.hypot(p.x - c.x, p.z - c.z).toFixed(3); }).concat([+pesoReposo.toFixed(2)]); }, camara, verEspiral: t => { efectoEspiral = t; }, baston: () => baston.position.toArray().map(v => +v.toFixed(2)).concat([bastonEnMano]), colisionesCerca: (x, z) => colisiones.filter(c => Math.hypot(c.x - x, c.z - z) < c.r + 3).map(c => [+c.x.toFixed(1), +c.z.toFixed(1), +c.r.toFixed(2), +c.techo.toFixed(2), !!c.plataforma]), suelo: (x, z) => +alturaTerreno(x, z).toFixed(2),
+window.__blizzard = { rutaGolem: (z, grande) => rutaRecta({ zS: z, xS: 0, grande }, 80), chispas: () => chispas, esferas: () => esferasEd, paseantes: () => paseantes, hundidos: () => ventisqueros.reduce((a, v) => a + (v.fijo ? v.fijo.filter(f => f > 0.1).length : 0), 0), trazo, figuras: FIGURAS, ed: { chispasBase: () => { if (!chispas) chispas = crearChispas(); return chispas.map(c => ({ id: c.id, tramo: c.tramo, p: c.base.map(v => +v.toFixed(2)) })); }, MODELOS, KITS, aplicarMatEd, ponerEd, quitarEd, crearPiezaEd, firmaDe, cajaReal, unidadesMundo, cajaInstancia, firmaInstancia, sueloMat: () => MAT_SUELO, escenaEd, camara, renderer, scene, alturaTerreno, caminoX, nieblaLago, coposBajos, santuarios: [PLATAFORMA, PLATAFORMA2, PLATAFORMA3, PLATAFORMA4, PLATAFORMA5, PLATAFORMA6].map(P => P.z), hielo: HIELO, cuevaZ: PLATAFORMA7.z }, centroLago, colis: () => colisiones, hielos: () => losasHielo, TRAS, puzle, vel, pozoEn, guia: () => [guia.modo, +guia.t.toFixed(1), guia.p.toArray().map(v => +v.toFixed(1)), guia.cola[guia.cola.length - 1].p.toArray().map(v => +v.toFixed(1))], bolas: () => bolas.map(b => b.g.visible ? b.g.position.z : null), medir: () => { const t0 = performance.now(); actualizar(1 / 60); const t1 = performance.now(); ocultarTapadores(); const t2 = performance.now(); renderer.info.autoReset = false; renderer.info.reset(); if (desenfoque) desenfoque.dibujar(); else renderer.render(scene, camara); renderer.getContext().finish(); const t3 = performance.now(); const r = { logica: +(t1 - t0).toFixed(2), tapadores: +(t2 - t1).toFixed(2), dibujo: +(t3 - t2).toFixed(1), llamadas: renderer.info.render.calls, triangulos: renderer.info.render.triangles, geometrias: renderer.info.memory.geometries }; renderer.info.autoReset = true; return r; }, irSantuario: n => empezarEnSantuario(n), get giraBloques() { return giraBloques; }, get estadoJuego() { return estado; }, ventis: () => ventisqueros.map(v => [+v.cx.toFixed(1), +v.cz.toFixed(1), +v.ancho.toFixed(1)]), monticulos: () => MONTICULOS.map(m => [+m.x.toFixed(1), +m.z.toFixed(1), +m.r.toFixed(1)]), verCapa: (a, b) => { capaTela.malla.visible = a; esclavina.malla.visible = b; esclavina.malla.material.color.set(b === 2 ? 0xff00ff : 0xb88521); }, huesoMundo: n => { blizzard.updateMatrixWorld(true); return enMundo(n).toArray().map(v => +v.toFixed(3)); }, capaEstado: () => capaTela.estado(), capaRed: () => [0, 5, 66, 126, 131].map(k => [k, capaTela.P[k].toArray().map(v => +v.toFixed(2)), capaTela.A[k].toArray().map(v => +v.toFixed(2))]), capaDatos: () => { const a = capaTela.malla.geometry.attributes.position.array; return [a.length, Array.from(a.slice(0, 6)).map(v => +v.toFixed(2)), Array.from(a.slice(-3)).map(v => +v.toFixed(2)), capaTela.malla.visible, !!capaTela.malla.parent]; }, huesos: () => { blizzard.updateMatrixWorld(true); return ["Hips","Spine2","Neck","LeftShoulder","LeftArm","RightArm","LeftUpLeg","LeftFoot"].map(n => [n, ...enMundo(n).toArray().map(v => +v.toFixed(3))]); }, efectos: () => [+efectoEspiral.toFixed(2), +rachaViento.toFixed(2), !!espiralEn, estado, !!rescate], forzarAnim: n => { animForzada = n; }, pasosSalto: () => ZONA_PILASTRAS.map((z, i) => [caminoX(z) + PASO_SALTO[i], z]), rutaBosque: () => RUTA_BOSQUE.slice(), saltosBosque: () => SALTOS_BOSQUE.slice(), losas: () => losas.map(L => L.estado[0]).join(""), saltosLosas: () => SALTOS_LOSAS.slice(), pilares: () => PILARES.map(([x, z, r]) => [caminoX(z) + x, z, r]), get abrePuertas() { return abrePuertas; }, niebla: f => { NIEBLA_LEJOS = f; }, scene, probarRodilla: () => { escalonDura = 0.45; escalonAlto = 0.5; escalon = 0.3; blizzard.updateMatrixWorld(true); const a = blizzard.worldToLocal(enMundo("RightFoot")); gestoEscalon(); blizzard.updateMatrixWorld(true); const b = blizzard.worldToLocal(enMundo("RightFoot")); escalon = 0; return [a.toArray(), b.toArray()].map(v => v.map(x => +x.toFixed(2))); }, manos: () => { blizzard.updateMatrixWorld(true); const c = enMundo("Hips"); return ["LeftHand", "RightHand"].map(n => { const p = enMundo(n); return +Math.hypot(p.x - c.x, p.z - c.z).toFixed(3); }).concat([+pesoReposo.toFixed(2)]); }, camara, verEspiral: t => { efectoEspiral = t; }, baston: () => baston.position.toArray().map(v => +v.toFixed(2)).concat([bastonEnMano]), colisionesCerca: (x, z) => colisiones.filter(c => Math.hypot(c.x - x, c.z - z) < c.r + 3).map(c => [+c.x.toFixed(1), +c.z.toFixed(1), +c.r.toFixed(2), +c.techo.toFixed(2), !!c.plataforma]), suelo: (x, z) => +alturaTerreno(x, z).toFixed(2),
   pos, get estado() { return estado; }, get animacion() { return accion && accion.getClip().name; },
   saltarIntro() { if (estado === "intro") { tIntro = INTRO_DURA; actualizar(1 / 60); } }, get tieneBaston() { return tieneBaston; }, get muevePiedras() { return muevePiedras; }, kitsObj: () => ({ kitRocas, kitRuinas }), fijarCamara: v => { camaraFija = v; }, penascos: () => penascos.map(p => p.estado + " " + p.g.position.x.toFixed(1) + "," + p.g.position.z.toFixed(1)), get rescatando() { return !!rescate; },
   secciones: () => [3, 4, 6].map(i => [i, kitRuinas[i].radio, kitRuinas[i].ancho, seccion(kitRuinas[i], 0.5)]),
