@@ -5901,7 +5901,7 @@ function moverPaseantes(dt) {
     P.g.visible = op > 0.02; if (!P.g.visible) continue;
     { const rp = P.grande ? 1.6 : 0.8; let y = Math.max(alturaSuelo(x, z), alturaSuelo(x + rp, z), alturaSuelo(x - rp, z), alturaSuelo(x, z + rp), alturaSuelo(x, z - rp)); if (y < pos.y - 6) y = pos.y - 0.6;   /* (los pies, sobre lo más alto bajo ellos: nunca hundidos) */   /* (sobre el terreno donde está: a la altura del camino atravesaba las dunas) */ P.g.position.set(x, y - 0.15, z); }
     { const c = camara.position, dd = P.g.position.distanceTo(c), D = Math.min(dd, scene.fog.far + 0.5), k2 = D / dd;   // (se dibuja a escala en el borde de la niebla: lo tapa solo lo que se ve, no las colinas ya borradas por la niebla)
-      P.g.position.sub(c).multiplyScalar(k2).add(c); P.g.scale.setScalar(P.esc * k2); P.uBase.value = P.g.position.y; P.uAlto.value = (P.grande ? 10 : 5) * k2 * (P.huellas ? 1.5 : 1);   // (el de las huellas: más bruma en las piernas) }
+      P.g.position.sub(c).multiplyScalar(k2).add(c); P.g.scale.setScalar(P.esc * k2); P.uBase.value = P.g.position.y; P.uAlto.value = (P.grande ? 10 : 5) * k2 * (P.huellas ? 1.5 : 1);   /* (el de las huellas: más bruma en las piernas) */ }
     P.g.rotation.y = P.huellas ? Math.atan2(P.dir.x, P.dir.z) : P.recto ? Math.PI : P.lado > 0 ? -Math.PI / 2 : Math.PI / 2;   // (mira hacia donde anda)
     P.mix.update(dt);   // (anda de verdad: sus pasos van con lo que avanza)
     P.mat.opacity = 1; P.mat.color.copy(scene.fog.color).lerp(_siluetaG, (P.huellas ? 0.27 : P.grande ? 0.2 : 0.23) * op);   // (el de las huellas, más presente)   // (no transparente: al alejarse se aclara hacia el tono de la niebla y se pierde en ella)
