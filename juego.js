@@ -310,7 +310,7 @@ const ESCALINATA_GIRO = 0;
 const COLUMNA4_Z = -980, SIMA4 = { desde: COLUMNA4_Z - 1.25, hasta: COLUMNA4_Z - 6.5 };
 const anchoC2 = z => 4.4 + Math.sin(z * 0.13) * 0.7;
 // Nieve que se hunde (como arenas movedizas, en espiral): de pared a pared; hay que saltarla corriendo.
-const ARENAS = [{ z: -881, largo: 2.6 }, { z: -929, largo: 2.6 }, { z: -630, largo: 2.6, ancho: 9 }, { z: -685, largo: 2.6, ancho: 9 }];   // (las dos últimas, en el manto de las dunas)
+const ARENAS = [{ z: -881, largo: 2.6 }, { z: -929, largo: 2.6 }, { z: -630, largo: 2.6, ancho: 9 }, { z: -685, largo: 2.6, ancho: 9 }, { z: -1838, largo: 3, ancho: 45 }, { z: -1912, largo: 3, ancho: 45 }, { z: -1978, largo: 3, ancho: 45 }];   /* (las tres últimas, en el cementerio de huesos: de lado a lado) */   // (las dos últimas, en el manto de las dunas)
 // En las dunas de después del desfiladero, pozos de nieve que se hunde a ambos lados de un paso firme que
 // serpentea (el del recorrido): hay que seguirlo. Ordenados por z.
 let _pozos = null;
@@ -513,8 +513,8 @@ function alturaTerreno(x, z) {
   { const zH = HIELO.hasta; if (z < zH && z > zH - 12 && Math.abs(x) < 90) h += 0.45 * suave(zH - 12, zH, z); }
   if (z < -1519 && z > -1543) h += 2.15 * suave(-1520, -1533.5, z) * suave(-1542, -1537.5, z) * suave(13, 9, Math.abs(x - 2));   /* (tras la segunda pared de hielo, el suelo de la cueva puesto en el editor empezaba 2 m más alto: una rampa suave para subir) */   /* (al salir del lago, sin escalón: el paso sube suave hasta el hielo) */
   if (z < -1995) {   /* (la zona nueva) */
-    const k = suave(-1995, -2020, z), cx = caminoX(z), dx = x - cx, d = Math.abs(dx), E = altoMont(z);
-    let n = E + 0.9 * Math.sin(x * 0.1 + z * 0.07) * Math.sin(z * 0.05 + 1.1) * suave(2, 9, d);
+    const k = suave(-1995, -2006, z), cx = caminoX(z), dx = x - cx, d = Math.abs(dx), E = altoMont(z);
+    let n = E + 31.8 * (1 - suave(-1998, -2095, z)) + 0.9 * Math.sin(x * 0.1 + z * 0.07) * Math.sin(z * 0.05 + 1.1) * suave(2, 9, d);
     n += suave(MONT.mont, MONT.mont - 25, z) * (1 - suave(MONT.acant + 10, MONT.acant, z)) * 46 * suave(14, 70, d) * (0.65 + 0.35 * Math.sin(x * 0.05 + z * 0.03));   /* (montañas a los lados) */
     const ac = suave(MONT.acant + 5, MONT.acant - 8, z), b1 = (z < MONT.borde1[0] && z > MONT.borde1[1]) || (z < MONT.borde3[0] && z > MONT.borde3[1]), b2 = z < MONT.borde2[0] && z > MONT.borde2[1], W = anchoMont(z);
     if (ac > 0) { const wl = b1 ? 1.6 : W, wr = b2 ? 1.6 : W; n += ac * 38 * Math.max(dx < 0 && !b2 ? suave(wl, wl + 3, -dx) : 0, dx > 0 && !b1 ? suave(wr, wr + 3, dx) : 0);   /* (paredes de acantilado) */
@@ -729,7 +729,7 @@ let MAT_SUELO = null;                                        // el material del 
       float polvoR = smoothstep(0.55, 0.85, motasR + (nS.y - 0.25) * 0.6) * 0.65;
       diffuseColor.rgb = mix(diffuseColor.rgb, pr * vec3(0.98, 0.99, 1.03), roca * (1.0 - polvoR));
       diffuseColor.rgb *= 1.0 - 0.96 * max(hondoP, smoothstep(-2836.0, -2839.0, vMundo.z) * (1.0 - smoothstep(-2856.0, -2853.0, vMundo.z)) * (1.0 - smoothstep(10.0, 18.5, vMundo.y)));
-      diffuseColor.rgb *= 1.0 + 0.45 * roca * smoothstep(-1774.0, -1771.0, vMundo.z) * (1.0 - smoothstep(-1672.0, -1669.0, vMundo.z)) * (1.0 - hondoP);   // (las paredes de los pozos, más claras arriba; al fondo, a oscuras)
+      diffuseColor.rgb *= 1.0 + 0.95 * roca * smoothstep(-1774.0, -1771.0, vMundo.z) * (1.0 - smoothstep(-1672.0, -1669.0, vMundo.z)) * (1.0 - hondoP);   // (las paredes de los pozos, más claras arriba; al fondo, a oscuras)
       diffuseColor.rgb *= mix(vec3(1.0), vec3(0.965, 0.98, 1.025), roca);   // (las paredes espolvoreadas, un punto más azules: como el resto de la piedra)
       // En el desfiladero final, las paredes de los precipicios se pierden en la niebla unos metros bajo el
       // paso (contando desde la cámara): lo hondo no se ve. El suelo llano no se toca.
@@ -1633,7 +1633,7 @@ function encajar(gltf, x, y, z, ax, ay, az, giro = 0) {
   { const P6 = PLATAFORMA6;
     // Un cilindro de pilastras rectas y muy altas, juntas, que cierran todo el perímetro (solo el hueco de llegada).
     const texP = new THREE.TextureLoader().load("texturas/piedra.jpg"); texP.wrapS = texP.wrapT = THREE.RepeatWrapping; texP.repeat.set(1, 8);
-    const matP = new THREE.MeshStandardMaterial({ map: texP, color: 0x9aa3b4, roughness: 0.95 }); matP.userData.nevada = true;
+    const matP = new THREE.MeshStandardMaterial({ map: texP, color: 0x828b9a, roughness: 0.95 }); matP.userData.nevada = true;
     const geoPr = (() => {   // (cada pieza del kit comparte los vértices de todo el modelo: su caja, solo con los suyos)
       const caja = P => { const b = new THREE.Box3(), v = new THREE.Vector3(), pa = P.geo.attributes.position, ix = P.geo.index.array; for (let i = 0; i < ix.length; i++) b.expandByPoint(v.fromBufferAttribute(pa, ix[i])); return b; };
       const [, B, bb] = [0, 1, 2, 3, 4, 5].map(i => { const P = kitPilares[i], b = caja(P), t = b.getSize(new THREE.Vector3()); return [Math.abs(t.x - t.z) / Math.max(t.x, t.z) + (t.y < Math.max(t.x, t.z) ? 0.5 : 0), P, b]; }).sort((a, b) => a[0] - b[0])[0];   // (la pieza más recta y de sección más cuadrada)
@@ -2276,7 +2276,7 @@ function moverZonas(dt) {
     const dx = pos.x - G.col.x, dz = pos.z - G.col.z, d = Math.hypot(dx, dz);
     if (!rescate && d < G.col.r + 0.45 && pos.y < G.col.techo && G.golpeT <= 0) { const nx = dx / (d || 1), nz = dz / (d || 1); pos.x = G.col.x + nx * (G.col.r + 0.5); pos.z = G.col.z + nz * (G.col.r + 0.5); vel.x = nx * 8; vel.z = nz * 8; vel.y = Math.max(vel.y, 3.5); enSuelo = false; G.golpeT = 0.6; musica.rocas(0.45); }   // (el empujón)
   }
-  moverPaseantes(dt); moverEsferas(dt); moverMurosYAspas(dt); moverGolemP7(dt); moverGolemsIsla(dt); moverGolemPuerta(dt); moverGolemsPozos(dt); moverMontes(dt); barreraSima4Paso(); moverCuevaA(dt);
+  moverPaseantes(dt); moverEsferas(dt); moverMurosYAspas(dt); moverGolemP7(dt); moverGolemsIsla(dt); moverGolemPuerta(dt); moverGolemsPozos(dt); moverMontes(dt); moverRodantesCem(dt); barreraSima4Paso(); moverCuevaA(dt);
   for (const W of rodantesEd) {   // ruedas del editor: van y vienen rodando de un lado al otro del paso
     const k = 0.5 - 0.5 * Math.cos(relojMov * 0.55 + W.fase), x = lerp(W.x0, 2 * W.cx - W.x0, k), d = x - W.x; W.x = x;
     W.g.position.x = x; W.g.rotation.z -= d / Math.max(0.5, W.R); W.col.x = x;
@@ -4333,20 +4333,24 @@ function animarPaso(dt) {
     { const [z0, z1] = MONT.esc1, n = 5, largo = (z0 - z1) / n, sube = 10 / n;   /* (la primera: escalinata de piedra, como la del acantilado de columnas) */
       for (let k = 0; k < n; k++) { const z = z0 - largo * (k + 0.5), e = encajar(gEscalinata, caminoX(z), altoMont(z) - sube * 0.7, z, 6.5, sube * 1.7, largo * 1.4, ESCALINATA_GIRO); if (k % 2) e.scale.x = -1; nevarPieza(e); } }
     { const [z0, z1] = MONT.esc2, n = 12, largo = (z0 - z1) / n;   /* (la segunda: peldaños de piedra tallada, tumbados uno tras otro) */
-      for (let k = 0; k < n; k++) { const z = z0 - largo * (k + 0.5), y = altoMont(z), cx = caminoX(z); pilarTallado(kitPilares[k % 3], new THREE.Vector3(cx - 3.2, y - 0.5, z), new THREE.Vector3(cx + 3.2, y - 0.5, z), largo * 1.3, rM() * 0.3); } }
+      for (let k = 0; k < n; k += 2) { const z = z0 - largo * (k + 1), y = altoMont(z + largo), sube = 20 / n; nevarPieza(encajar(gEscaleraPiedra, caminoX(z), y - 0.5, z, largo * 2.1, sube + 0.6, 6.5, Math.PI / 2)); } }   /* (la escalera de piedra que me pasaste, tramo a tramo) */
     for (const [z0, z1, lado] of [[MONT.borde1[0], MONT.borde1[1], -1], [MONT.borde2[0], MONT.borde2[1], 1]]) for (let z = z0 - 4; z > z1; z -= 9) { const x = caminoX(z) + lado * 5.5, y = altoMont(z) - 2;   /* (la pared del paso por el borde: paños de acantilado) */
       nevarPieza(encajar(gAcantilado, x, y, z, 10, 40, 6, lado * Math.PI / 2)); } }
   // Decorado de la zona de montañas: paredes de acantilado, rocas nevadas al pie, columnatas, ruinas, arcos sobre el camino y estatuas.
-  { const rD = generador(5151), dec = decorMontes, y0 = z => altoMont(z);
+  { const rD = generador(5151), dec = decorMontes, y0 = z => alturaTerreno(caminoX(z), z), n0 = scene.children.length;
     const matRoca = (() => { let m0 = null; gRocas.scene.traverse(o => { if (!m0 && o.isMesh) m0 = o.material; }); const m = m0.clone(); m.onBeforeCompile = sh => nieveFinaBase(sh); m.customProgramCacheKey = () => "rocaMontN"; return m; })();
-    const roca = (x, z, a, y) => { const pz = kitRocas[1 + Math.floor(rD() * 5)], m = new THREE.Mesh(pz.geo, matRoca), s2 = a / pz.alto; m.scale.setScalar(s2); m.position.copy(pz.desplaza).multiplyScalar(s2).add(new THREE.Vector3(x, (y ?? alturaTerreno(x, z)) - a * 0.18, z)); m.rotation.y = rD() * 6.28; m.castShadow = m.receiveShadow = true; scene.add(m); dec.push(m); return m; };
+    const cajaP = P => P._caja || (P._caja = (() => { const bx = new THREE.Box3(), v = new THREE.Vector3(), pa = P.geo.attributes.position, ix = P.geo.index.array; for (let i = 0; i < ix.length; i++) bx.expandByPoint(v.fromBufferAttribute(pa, ix[i])); return bx; })());   /* (la caja de la pieza, solo con sus vértices: el kit los comparte todos) */
+    const roca = (x, z, a, y) => { const pz = kitRocas[1 + Math.floor(rD() * 5)], bx = cajaP(pz), t = bx.getSize(new THREE.Vector3()), m = new THREE.Mesh(pz.geo, matRoca), s2 = a / Math.max(0.01, t.y); m.scale.setScalar(s2); m.position.set(x - (bx.min.x + bx.max.x) / 2 * s2, (y ?? alturaTerreno(x, z)) - a * 0.18 - bx.min.y * s2, z - (bx.min.z + bx.max.z) / 2 * s2); { const ry = rD() * 6.28, cx0 = (bx.min.x + bx.max.x) / 2 * s2, cz0 = (bx.min.z + bx.max.z) / 2 * s2; m.rotation.y = ry; m.position.x = x - (cx0 * Math.cos(ry) + cz0 * Math.sin(ry)); m.position.z = z - (-cx0 * Math.sin(ry) + cz0 * Math.cos(ry)); } m.castShadow = m.receiveShadow = true; scene.add(m); dec.push(m); return m; };
     const pieza = (G, x, y, z, ax, ay, az, giro) => { const g = encajar(G, x, y, z, ax, ay, az, giro); nevarPiezaG(g); dec.push(g); return g; };
     const abierto = (z, lado) => (lado > 0 && (enZ(z, MONT.borde1) || enZ(z, MONT.borde3))) || (lado < 0 && enZ(z, MONT.borde2));
     const enBorde = z => enZ(z, [MONT.borde1[0] + 3, MONT.borde1[1] - 3]) || enZ(z, [MONT.borde2[0] + 3, MONT.borde2[1] - 3]) || enZ(z, [MONT.borde3[0] + 3, MONT.borde3[1] - 3]);
     // paredes de acantilado, a los dos lados, escalonadas (unas delante de otras, de distinta altura)
     for (let z = MONT.mont - 4; z > MONT.claro[1] + 4; z -= 9 + rD() * 4) for (const lado of [-1, 1]) { if (enBorde(z) || abierto(z, lado)) continue; const W = anchoMont(z), cx = caminoX(z);
-      pieza(gAcantilado, cx + lado * (W + 4.5 + rD() * 4), y0(z) - 6, z, 11 + rD() * 6, 30 + rD() * 22, 7 + rD() * 3, lado * Math.PI / 2 + (rD() - 0.5) * 0.5);
       if (rD() < 0.5) pieza(gAcantilado, cx + lado * (W + 12 + rD() * 6), y0(z) - 6, z - 4, 14, 50 + rD() * 25, 8, lado * Math.PI / 2 + (rD() - 0.5) * 0.6); }   /* (detrás, otra más alta: profundidad) */
+    // paredes de peñones: las mismas columnas de piedra apiladas, con su nieve arriba, del primer precipicio (delante, más bajas; detrás, altas)
+    for (const [paso, lejos, a0, a1] of [[6.5, 0.3, 9, 22], [11, 6, 22, 40]]) for (let z = MONT.mont - 2; z > MONT.claro[1] + 3; z -= paso * (0.8 + rD() * 0.4)) for (const lado of [-1, 1]) { if (abierto(z, lado)) continue;
+      const b = (lado < 0 && (enZ(z, MONT.borde1) || enZ(z, MONT.borde3))) || (lado > 0 && enZ(z, MONT.borde2)), W = b ? 1.6 : anchoMont(z), rp = 2.4 + rD() * 1.8, x = caminoX(z) + lado * (W + rp + 0.4 + lejos), y = y0(z);
+      try { pilarDeKit(x, z, rp, "rocas", y + a0 + rD() * (a1 - a0), rD, false); } catch (e) { } }
     // rocas grandes y pequeñas con nieve al pie de las paredes
     for (let z = MONT.rocas - 4; z > MONT.claro[1] + 3; z -= 3.2 + rD() * 3) for (const lado of [-1, 1]) { if (abierto(z, lado) || enBorde(z) || rD() < 0.3) continue; const W = anchoMont(z), cx = caminoX(z);
       roca(cx + lado * (W + 0.6 + rD() * 2), z, 1.2 + rD() * 2.6, y0(z)); if (rD() < 0.35) roca(cx + lado * (W + 2.5 + rD() * 2), z + 1.2, 2.8 + rD() * 3, y0(z)); }
@@ -4361,9 +4365,14 @@ function animarPaso(dt) {
     // arcos de piedra sobre el camino
     for (const z of [MONT.mont - 26, MONT.platA + 16, MONT.rodantes[0] + 14, MONT.claro[0] + 4]) { const W = anchoMont(z), cx = caminoX(z), t = new THREE.Box3().setFromObject(gArcoRuina.scene).getSize(new THREE.Vector3()), g90 = t.z > t.x;
       pieza(gArcoRuina, cx, y0(z) - 0.6, z, g90 ? 3.5 : 2 * W + 5, 14, g90 ? 2 * W + 5 : 3.5, g90 ? Math.PI / 2 : 0); for (const l of [-1, 1]) colisiones.push({ x: cx + l * (W + 1.6), z, r: 1.6, techo: 99 }); }
+    // escaleras pegadas a la pared de los acantilados, que suben en diagonal por la roca
+    for (const [z0, lado, n] of [[MONT.mont - 40, -1, 5], [MONT.esc2[1] - 12, 1, 6], [MONT.platB - 34, -1, 5], [MONT.golem[0] + 2, 1, 4], [MONT.claro[0] - 8, -1, 5]]) { if (abierto(z0, lado)) continue;
+      for (let k = 0; k < n; k++) { const z = z0 - k * 3.4, W = anchoMont(z), x = caminoX(z) + lado * (W + 1.4), y = y0(z0) + k * 2.9; const g = pieza(gEscaleraPiedra, x, y - 0.4, z, 3.6, 3.3, 1.8, Math.PI / 2); } }
     // estatuas (cuando estén los modelos añadidos): guardianes a la entrada de las plataformas y de la cueva
     extrasListos.then(() => { const E1 = gExtras.estatua_piedra, D = gExtras.esqueleto_dragon; if (E1) for (const z of [MONT.platA + 9, MONT.platB + 16, MONT.claro[1] + 6]) for (const l of [-1, 1]) { const W = Math.min(anchoMont(z), 9), x = caminoX(z) + l * (W + 0.5), g = encajar(E1, x, y0(z) - 0.3, z, 3, 7.5, 3, l > 0 ? -Math.PI / 2 : Math.PI / 2); nevarPiezaG(g); dec.push(g); colisiones.push({ x, z, r: 1.2, techo: y0(z) + 7 }); setTimeout(() => espolvoreoMapa(g), 0); }
+      const ER = gExtras.escalera_ruina; if (ER) for (const [z, l, a] of [[MONT.platB - 4, 1, 34], [MONT.claro[0] - 22, -1, 30], [MONT.mont - 70, 1, 28]]) { const W = anchoMont(z), g = encajar(ER, caminoX(z) + l * (W + a * 0.5 + 2), y0(z) - 1.5, z, a, a * 0.36, a * 0.92, -0.4636 + (l > 0 ? -Math.PI / 2 : Math.PI / 2)); nevarPiezaG(g); g.traverse(q => { if (q.isMesh) q.castShadow = false; }); dec.push(g); setTimeout(() => espolvoreoMapa(g), 0); }   /* (las escaleras amplias que se elevan, a los lados, como ruinas enormes) */
       if (D) { const z = MONT.golem[0] - 30, g = encajar(D, caminoX(z) + 16, y0(z) - 2.5, z, 18, 9, 26, 0.6); nevarPiezaG(g); dec.push(g); setTimeout(() => espolvoreoMapa(g), 0); } }).catch(() => {});
+    for (let i = n0; i < scene.children.length; i++) { const o = scene.children[i]; if (!dec.includes(o)) dec.push(o); } for (const o of dec) o.traverse(q => { if (q.isMesh) q.castShadow = false; });   /* (todo lo de la zona, sin sombra propia y sin dibujar de lejos: el juego iba lento) */
     // bancos de niebla bajos, entre las paredes
     { const c = document.createElement("canvas"); c.width = c.height = 64; const x2 = c.getContext("2d"), gr = x2.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, "rgba(255,255,255,0.75)"); gr.addColorStop(0.6, "rgba(255,255,255,0.25)"); gr.addColorStop(1, "rgba(255,255,255,0)"); x2.fillStyle = gr; x2.fillRect(0, 0, 64, 64); const tx = new THREE.CanvasTexture(c);
       for (let z = MONT.rocas - 8; z > VALLE_AZUL.fin; z -= 7 + rD() * 6) { if (z < CUEVA_A.desde + 4 && z > VALLE_AZUL.desde) continue; const W = z < MONT.claro[1] ? 20 : anchoMont(z), sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, color: z < VALLE_AZUL.desde ? 0x8fa6d8 : 0xe8eef8, transparent: true, opacity: 0, depthWrite: false, fog: false })); sp.userData.op = 0.32 + rD() * 0.2;
@@ -4380,7 +4389,8 @@ function animarPaso(dt) {
     const rM2 = generador(5858); for (let k = 0; k < 14; k++) { const a = rM2() * Math.PI - Math.PI / 2, d = 14 + rM2() * 9; enterrar(kitRocas[1 + Math.floor(rM2() * 4)], cx + Math.sin(a) * d, (MONT.claro[0] + MONT.claro[1]) / 2 + Math.cos(a) * 10, 1.4 + rM2() * 3, rM2() * 6, 0.3); } }
   // Toda la zona final, cubierta de nieve acumulada: un manto continuo que se pisa (como la del paso de hielo).
   { const x0 = -70, x1 = 50, z0 = SALIDA_CUEVA_Z - 2, z1 = -2010, dist = (x, z) => Math.max(0, x0 + 3 - x, x - (x1 - 3), z - (z0 - 3), (z1 + 3) - z, ...POZOS_HEX.map(P => 3.2 - (Math.hypot(x - P.x, z - P.z) - P.ro)));   /* (junto a los pozos, el manto se afina hasta nada: sin dientes en el filo) */   /* (la zona de pozos y la de los cadáveres: toda cubierta de nieve honda, como la de la zona de las ruedas) */
-    for (let x = x0; x < x1 - 1; x += 40) for (let z = z0; z > z1 + 1; z -= 40) { const zb = Math.max(z1, z - 40); ventisquero(x + 20, (z + zb) / 2, 40, z - zb, 0.32, { dist, R: 3, sueloEn: (x, z) => alturaTerreno(x, z), celda: 0.5, salto: 0.6 }, true);   /* (salto corto: en el filo de los pozos salían dientes y láminas que cortaban los puentes) */ } }   /* (directo: la cola de nieve pendiente ya se había vaciado y no se creaba) */
+    for (let x = x0; x < x1 - 1; x += 40) for (let z = z0; z > z1 + 1; z -= 40) { const zb = Math.max(z1, z - 40); ventisquero(x + 20, (z + zb) / 2, 40, z - zb, 0.32, { dist, R: 3, sueloEn: (x, z) => enPozoHex(x, z, 0.4) ? -99 : alturaTerreno(x, z), celda: 0.5, salto: 0.6 }, true);   /* (salto corto: en el filo de los pozos salían dientes y láminas que cortaban los puentes) */ }
+    for (const A of ARENAS) if (A.z < -1800 && A.z > -2000) for (const v of ventisqueros) if (Math.abs(v.cz - A.z) < v.largo / 2 + A.largo && Math.abs(v.cx - caminoX(A.z)) < v.ancho / 2 + A.ancho) marcarArena(A, v); }   /* (la marca de las arenas del cementerio, en su manto) */   /* (directo: la cola de nieve pendiente ya se había vaciado y no se creaba) */
   /* (el manto fino de antes, sustituido por la nieve honda de arriba) */
   // Y ruinas grandes, medio enterradas y nevadas, a los dos lados del camino; dos arcos que se cruzan por debajo y, al fondo, una ruina inmensa.
   { const rR = generador(8282), nevar = g => g.traverse(o => { if (o.isMesh) { const m = o.material = o.material.clone(); m.onBeforeCompile = sh => { nieveFinaBase(sh); sh.fragmentShader = sh.fragmentShader.replace("float cubre = smoothstep(0.5, 0.78,", "float cubre = smoothstep(0.22, 0.55,"); }; m.customProgramCacheKey = () => "ruinaDunaN"; espolvorear(m, 0.85, "ruinaDuna", true, true); } }),   /* (fuera, todo con nieve acumulada encima y espolvoreado) */
@@ -5807,7 +5817,7 @@ function actualizar(dt) {
     camara.lookAt(mira);
     if (temblorCam > 0) { const k = temblorCam * temblorCam; camara.position.x += (Math.random() - 0.5) * 0.5 * k; camara.position.y += (Math.random() - 0.5) * 0.4 * k; camara.rotation.z += (Math.random() - 0.5) * 0.05 * k; temblorCam = Math.max(0, temblorCam - dt * 1.6); }   /* (los golpes del gólem: la pantalla tiembla) */
     scene.fog.near = 2; scene.fog.far = lerp(lerp(lerp(lerp(lerp(NIEBLA_LEJOS, 36, enTunel), 46, suave(DUNAS.desde, DUNAS.desde - 20, pos.z)), 28, enC2Z(pos.z)), 72, suave(HIELO.hasta + 5, HIELO.hasta - 10, pos.z)), 105, suave(SALIDA_CUEVA_Z, SALIDA_CUEVA_Z - 25, pos.z));   /* (fuera de la cueva, algo de niebla, menos) */   /* (en la cueva de hielo, menos niebla general) */   // (en el desfiladero final, más niebla)   // en las dunas, algo menos niebla
-    { const kM = suave(MONT.rocas + 10, MONT.rocas - 30, pos.z) * (1 - suave(CUEVA_A.desde + 6, CUEVA_A.desde - 6, pos.z)) + suave(VALLE_AZUL.desde + 4, VALLE_AZUL.desde - 12, pos.z); if (kM > 0) scene.fog.far = lerp(scene.fog.far, 70, Math.min(1, kM)); }   /* (en las montañas y el valle, niebla: las paredes del fondo se pierden) */
+    { const kM = suave(-1785, -1815, pos.z); if (kM > 0) scene.fog.far = lerp(scene.fog.far, 44, kM); }   /* (tras los pozos, en todas las zonas: bastante niebla) */   /* (en las montañas y el valle, niebla: las paredes del fondo se pierden) */
     // Al caer por un precipicio, la niebla se cierra enseguida: no se ve toda la caída.
     nieblaCaida = lerp(nieblaCaida, !enSuelo && pos.y < seguro.y - 2.5 ? 1 : 0, 1 - Math.exp(-dt * (pos.y < seguro.y - 2.5 ? 5 : 1.5)));
     scene.fog.near = lerp(2, 0.3, nieblaCaida); scene.fog.far = lerp(scene.fog.far, 5, nieblaCaida);
@@ -6570,13 +6580,13 @@ vec2 vorA(vec3 p){ vec3 i = floor(p), f = fract(p); float d1 = 8.0, d2 = 8.0;
   return vec2(sqrt(d1), sqrt(d2)); }`)
       .replace("#include <map_fragment>", `vec3 nA = normalize(vNA);
 vec2 v1 = vorA(vWA * 0.55), v2 = vorA(vWA * 1.7 + 3.1);
-float mk = vnA(vWA*0.6+7.3); float veta = (1.0 - smoothstep(0.0, 0.035, v1.y - v1.x)) * smoothstep(0.3, 0.45, mk); float veta2 = (1.0 - smoothstep(0.0, 0.02, v2.y - v2.x)) * smoothstep(0.55, 0.7, vnA(vWA*1.1+2.1));
+float mk = vnA(vWA*0.6+7.3); float veta = (1.0 - smoothstep(0.0, 0.09, v1.y - v1.x)) * smoothstep(0.3, 0.45, mk); float veta2 = (1.0 - smoothstep(0.0, 0.06, v2.y - v2.x)) * smoothstep(0.55, 0.7, vnA(vWA*1.1+2.1));
 float nieveA = smoothstep(0.55, 0.8, nA.y + (hA(floor(vWA*3.0)).x - 0.5) * 0.25);
-vec3 cuerpo = mix(vec3(0.42, 0.28, 0.14), vec3(0.70, 0.50, 0.26), vnA(vWA*0.35+0.5));
+vec3 cuerpo = mix(vec3(0.78, 0.6, 0.4), vec3(0.95, 0.82, 0.62), vnA(vWA*0.35+0.5));   /* (ópalo de ámbar: lechoso, claro) */
 diffuseColor.rgb = mix(cuerpo, vec3(0.93, 0.96, 1.0), nieveA);
 float fres = pow(1.0 - abs(dot(nA, normalize(cameraPosition - vWA))), 2.0);
 float brillo = (0.45 + 0.55 * vnA(vWA*0.3+1.7)) * (0.55 + 0.45 * smoothstep(0.05, 0.5, v1.y - v1.x)) * (0.8 + 0.4 * abs(nA.x));`)
-      .replace("#include <emissivemap_fragment>", "totalEmissiveRadiance *= (1.0 - nieveA * 0.92) * (brillo * 1.15 + veta * 0.85 + veta2 * 0.3 + fres * 0.7);   /* (luz suave: más el cuerpo que las grietas) */");
+      .replace("#include <emissivemap_fragment>", "totalEmissiveRadiance *= (1.0 - nieveA * 0.92) * (brillo * 1.45 + veta * 0.22 + veta2 * 0.05 + fres * 0.5);   /* (luz suave: más el cuerpo que las grietas) */\n{ float eL = dot(totalEmissiveRadiance, vec3(0.33)); vec3 iri = mix(vec3(1.0, 0.86, 0.7), mix(vec3(1.0, 0.8, 0.86), vec3(0.82, 0.9, 1.0), vnA(vWA * 0.8 + 4.0)), smoothstep(0.1, 0.8, fres)); totalEmissiveRadiance = mix(totalEmissiveRadiance, eL * 1.5 * iri, 0.35 + 0.35 * fres); }   /* (opalino: en los bordes, irisado rosa y azul) */");
     };
   }   /* (piedra que se enciende desde dentro) */
   const rA = generador(3131); for (let z = CUEVA_A.desde - 10; z > CUEVA_A.fin + 4; z -= 9 + rA() * 6) for (const lado of [-1, 1]) { if (rA() < 0.35) continue; const W = enZ(z, CUEVA_A.borde1) && lado > 0 || enZ(z, CUEVA_A.borde2) && lado < 0 ? null : (lado < 0 && enZ(z, CUEVA_A.borde1)) || (lado > 0 && enZ(z, CUEVA_A.borde2)) ? 2.6 : anchoCueva(z); if (W === null) continue;
@@ -6595,10 +6605,15 @@ function moverCuevaA(dt) {
   { const S = PLAT_MONT[2]; if (!cuevaA.runa) { if (!rescate && Math.hypot(pos.x - S.x, pos.z - S.z) < 3.5 && pos.y > S.techo - 0.5) { if (!cuevaA.avisoR) { cuevaA.avisoR = true; rotular(tactil ? "La runa de la cueva.\nMantén ◇ sobre ella." : "La runa de la cueva.\nMantén E sobre ella.", 5); } cuevaA.carga = (teclas.has("KeyE") || teclas.has("KeyJ")) ? (cuevaA.carga || 0) + dt : 0; efectoEspiral = Math.max(efectoEspiral, cuevaA.carga * 0.6);
         if (cuevaA.carga > 1.4) { cuevaA.runa = true; cuevaA.k = 0; musica.impulso(); temblorCam = 0.6; rotular("La runa despierta: la piedra se enciende.", 5); } } else cuevaA.carga = 0; } }   /* (resolver la runa de la cueva: todo se enciende y la puerta se abre) */
   if (cuevaA.runa) { cuevaA.k = Math.min(1, cuevaA.k + dt * 0.5); if (cuevaA.colsP.length && cuevaA.k > 0.2) { for (const c of cuevaA.colsP) { const i = colisiones.indexOf(c); if (i >= 0) colisiones.splice(i, 1); } cuevaA.colsP.length = 0; musica.rocas(0.8); } cuevaA.puerta.position.y = E + 5.5 + 12 * suave(0.2, 1, cuevaA.k); }
-  const kR = cuevaA.runa ? cuevaA.k : 0; cuevaA.mat.emissiveIntensity = 0.02 + 1.0 * kR; cuevaA.luzB.intensity = Math.max(2.6 * o, 2.2 * kR);   /* (resuelta la runa, el bastón se queda de ámbar y da luz) */
+  const kR = cuevaA.runa ? cuevaA.k : 0; cuevaA.mat.emissiveIntensity = 0.02 + 1.0 * kR;
+  if (cuevaA.runa && !cuevaA.halos) { cuevaA.halos = []; const c = document.createElement("canvas"); c.width = c.height = 64; const x2 = c.getContext("2d"), gr = x2.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, "rgba(255,150,60,1)"); gr.addColorStop(0.45, "rgba(255,130,50,0.45)"); gr.addColorStop(1, "rgba(255,140,60,0)"); x2.fillStyle = gr; x2.fillRect(0, 0, 64, 64); const tx = new THREE.CanvasTexture(c);
+    for (const m of cuevaA.ambar) { const g = m.geometry, b = new THREE.Box3(), v = new THREE.Vector3(), pa = g.attributes.position, ix = g.index ? g.index.array : null; if (ix) for (let i = 0; i < ix.length; i += 3) b.expandByPoint(v.fromBufferAttribute(pa, ix[i])); else b.setFromBufferAttribute(pa); m.updateMatrixWorld(true); b.applyMatrix4(m.matrixWorld); const ce = b.getCenter(new THREE.Vector3()), t = b.getSize(new THREE.Vector3()), r = Math.min(7, Math.max(t.x, t.z) * 1.4 + 2);
+      const h = new THREE.Mesh(new THREE.PlaneGeometry(r * 2, r * 2), new THREE.MeshBasicMaterial({ map: tx, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, fog: false })); h.rotation.x = -Math.PI / 2; h.position.set(ce.x, Math.max(alturaTerreno(ce.x, ce.z), b.min.y) + 0.08, ce.z); h.renderOrder = 2; scene.add(h); cuevaA.halos.push(h); } }   /* (cada roca de ámbar alumbra el suelo a su alrededor: un resplandor suave) */
+  if (cuevaA.halos) for (const h of cuevaA.halos) h.material.opacity = 0.95 * kR; cuevaA.luzB.intensity = 1.8 * kR;   /* (el bastón solo se vuelve de ámbar y da luz cuando se encienden las rocas) */   /* (resuelta la runa, el bastón se queda de ámbar y da luz) */
   if (cuevaA.runa && !cuevaA.bastonAmbar) { cuevaA.bastonAmbar = true; baston.traverse(q => { if (q.isMesh && q.material && q.material.isMeshStandardMaterial) { q.material.color.setHex(0xc98a3c); q.material.emissive = new THREE.Color(0xff9a3a); q.material.roughness = 0.35; cuevaA.matB = cuevaA.matB || []; cuevaA.matB.push(q.material); } }); }
   if (cuevaA.matB) for (const m of cuevaA.matB) m.emissiveIntensity = 0.9 * kR;
-  { const cerca = cuevaA.ambar.map(m => [m, Math.abs(m.position.z - pos.z) + Math.abs(m.position.x - pos.x) * 0.5]).sort((a, b) => a[1] - b[1]); cuevaA.luces.forEach((L, i) => { const c = cerca[i]; if (!c) { L.intensity = 0; return; } L.position.copy(c[0].position).add(new THREE.Vector3(0, 1.4, 0)); L.intensity = 3.4 * kR; }); }
+  { const cen = m => m.userData.cen || (m.userData.cen = (() => { const g = m.geometry, b = new THREE.Box3(), v = new THREE.Vector3(), pa = g.attributes.position, ix = g.index ? g.index.array : null; if (ix) for (let i = 0; i < ix.length; i += 3) b.expandByPoint(v.fromBufferAttribute(pa, ix[i])); else b.setFromBufferAttribute(pa); m.updateMatrixWorld(true); b.applyMatrix4(m.matrixWorld); const _b = b, c = _b.getCenter(new THREE.Vector3()), t = _b.getSize(new THREE.Vector3()); c.y = _b.min.y + Math.min(t.y * 0.5, 2.5); return c; })());   /* (la luz, dentro de la roca de verdad: con la posición de la pieza quedaba lejos y salían focos en el suelo vacío) */
+    const cerca = cuevaA.ambar.map(m => [m, Math.abs(cen(m).z - pos.z) + Math.abs(cen(m).x - pos.x) * 0.5]).sort((a, b) => a[1] - b[1]); cuevaA.luces.forEach((L, i) => { const c = cerca[i]; if (!c) { L.intensity = 0; return; } L.position.copy(cen(c[0])); L.intensity = 2.6 * kR; }); }
   for (const T of cuevaA.tablas) { if (T.t < 0 && !rescate && Math.hypot(pos.x - T.x, pos.z - T.z) < 1.3 && Math.abs(pos.y - E) < 0.4) { T.t = 0; musica.rocas(0.2); }   /* (al pisarlo, cruje y al poco cae) */
     if (T.t >= 0) { T.t += dt; if (T.t > 0.55) { const k = colisiones.indexOf(T.col); if (k >= 0) colisiones.splice(k, 1); T.m.position.y = T.y0 - (T.t - 0.55) ** 2 * 9; T.m.rotation.x += dt * 1.2; } else T.m.position.y = T.y0 - Math.sin(T.t * 60) * 0.03; } }
   if (rescate) for (const T of cuevaA.tablas) if (T.t >= 0) { T.t = -1; T.m.position.y = T.y0; T.m.rotation.x = 0; if (!colisiones.includes(T.col)) colisiones.push(T.col); }   /* (al caer Blizzard, el puente vuelve) */
@@ -6614,6 +6629,17 @@ function moverCuevaA(dt) {
         if (!rescate && d < 3.4 && pos.y < E + 1.5) { const f = (3.4 - d) / 3.4; empujarBlizzard(C.lado * (5 + 5 * f) + (pos.x - C.x) * 1.5, (pos.z - C.z) * 2, 5 + 2 * f); } }   /* (la onda del golpe: hacia el vacío) */
       else { C.sm.material.opacity = Math.max(0, C.sm.material.opacity - dt * 0.6); C.m.position.y -= dt * 0.25; if (C.t > T0 + 2) { C.t = -1; C.golpe = false; C.m.visible = C.sm.visible = false; } } } }
   for (const R of cuevaA.rocas) { const xa = R.col.x, x = R.x + Math.sin(cuevaA.t * 0.75 + R.fase) * 4.2; R.col.x = x; R.m.position.set(x, E - 0.7, R.z); if (!rescate && enSuelo && Math.abs(pos.z - R.z) < 1.7 && Math.abs(pos.x - xa) < 1.8 && Math.abs(pos.y - E) < 0.4) pos.x += x - xa; }   /* (subido a una, te lleva) */
+}
+// En el cementerio de huesos: gólems hechos bola que cruzan rodando de lado a lado.
+const rodCem = { listo: false, t: 0, L: [] };
+function moverRodantesCem(dt) {
+  if (window.BLIZZARD_EDITOR || pos.z > -1790 || pos.z < -2010) return;
+  if (!rodCem.listo) { rodCem.listo = true; [[-1872, 0, 14], [-1945, 2.2, 16], [-1995, 4.1, 12]].forEach(([z, fase, amp]) => { const R = 1.5, g = new THREE.Group(), giro = new THREE.Group(), G = gGolemRoca || gGolemPiedra, d = encajar(G, 0, -R, 0, 2.6, 2.9, 2.6, 0); scene.remove(d); d.rotation.x = Math.PI / 2; giro.add(d); giro.position.y = R; g.add(giro); scene.add(g);
+      g.traverse(o => { if (o.isMesh) { o.castShadow = true; const m = o.material = o.material.clone(); m.onBeforeCompile = sh => nieveFinaBase(sh); m.customProgramCacheKey = () => "nevarPieza"; } }); espolvoreoMapa(g); rodCem.L.push({ g, giro, R, z, fase, amp, x: caminoX(z) }); }); }   /* (el gólem, encogido en bola) */
+  rodCem.t += dt;
+  for (const Q of rodCem.L) { const cx = caminoX(Q.z), xa = Q.x; Q.x = cx + Math.sin(rodCem.t * 0.55 + Q.fase) * Q.amp; const y = alturaTerreno(Q.x, Q.z); Q.g.position.set(Q.x, y, Q.z); Q.giro.rotation.z -= (Q.x - xa) / Q.R;
+    if (Math.abs(Q.x - xa) > 0.02 && ((rodCem.t * 3) | 0) % 2 === 0) surcoEnNieve(Q.x, Q.z, 0.9, 0.22);   /* (deja su rastro en la nieve) */
+    if (!rescate && Math.hypot(pos.x - Q.x, pos.z - Q.z) < Q.R + 0.5 && pos.y < y + 2 * Q.R + 0.3) empujarBlizzard(Math.sign(Q.x - xa || 1) * 12, (pos.z > Q.z ? 1 : -1) * 4, 5); }
 }
 function moverMontes(dt) {
   if (window.BLIZZARD_EDITOR || pos.z > -2500 || pos.z < -2900) return; const E = 20;
@@ -6868,7 +6894,7 @@ function hexPiedra(claro) { return (() => {   // la piedra de las paredes de los
     sh.fragmentShader = "uniform sampler2D piedraH;\nuniform vec3 tonoN;\nvarying vec3 vWH;\nvarying vec3 vNH;\n" + sh.fragmentShader.replace("#include <map_fragment>", `
       vec3 nH = normalize(vNH); vec2 uvR = (abs(nH.x) > abs(nH.z) ? vWH.zy : vWH.xy) * vec2(0.16, 0.22); if (abs(nH.y) > 0.7) uvR = vWH.xz * 0.16;
       vec3 pr = texture2D(piedraH, uvR).rgb, pr2 = texture2D(piedraH, uvR * 0.37 + 0.5).rgb;
-      pr = clamp((pr * 0.6 + pr2 * 0.4 - 0.62) * 3.0 + 0.62, 0.0, 1.0); if (CLARO > 0.5) pr = vec3(dot(pr, vec3(0.3, 0.45, 0.25))); pr *= (CLARO > 0.5 ? vec3(1.08, 1.13, 1.22) : vec3(0.8, 0.84, 0.92));   /* (más clara) */
+      pr = clamp((pr * 0.6 + pr2 * 0.4 - 0.62) * 3.0 + 0.62, 0.0, 1.0); pr = vec3(dot(pr, vec3(0.3, 0.45, 0.25)));   /* (gris: sin el amarillo de la textura) */ pr *= (CLARO > 0.5 ? vec3(1.08, 1.13, 1.22) : vec3(0.8, 0.84, 0.92));   /* (más clara) */
       float nieveH = smoothstep(0.55, 0.8, nH.y + (pr2.r - 0.6) * 0.3);
       diffuseColor.rgb *= mix(pr, CLARO > 0.5 ? vec3(1.0) : tonoN, nieveH);`).replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n totalEmissiveRadiance += vec3(0.93, 0.95, 0.98) * nieveH * 0.32 * CLARO;"); sh.fragmentShader = "#define CLARO " + (claro ? "1.0" : "0.0") + "\n" + sh.fragmentShader; };
   m.customProgramCacheKey = () => claro ? "hexPozoClaro" : "hexPozo"; return m; })(); }
@@ -6913,7 +6939,8 @@ function espolvoreoMapa(g, fuerza = 0.85, cache = null) {
   g.traverse(o => { if (!o.isMesh || o.isSkinnedMesh || Array.isArray(o.material) || !o.material.isMeshStandardMaterial || o.material.transparent || o.material.userData.suelo || o.material.userData.esp) return; _mallasEsp.push(o); if (cache && cache.has(o.material)) { o.material = cache.get(o.material); return; } const m0 = o.material, prev = m0.onBeforeCompile, k0 = m0.customProgramCacheKey ? m0.customProgramCacheKey() : "", m = o.material = m0.clone(); m.userData.esp = true; m.userData.uEsp = { value: new THREE.Matrix4() }; m.userData.uUsaEsp = { value: 0 }; if (cache) cache.set(m0, m);
     m.onBeforeCompile = function (sh, r) { if (prev) prev.call(m0, sh, r); sh.uniforms.texEsp = { value: _texEsp }; const uD = this.userData; if (!uD.uEsp || !(uD.uEsp.value instanceof THREE.Matrix4)) { uD.uEsp = { value: new THREE.Matrix4() }; uD.uUsaEsp = { value: 0 }; } sh.uniforms.mEsp = uD.uEsp; sh.uniforms.usaEsp = uD.uUsaEsp;
       sh.vertexShader = "uniform mat4 mEsp;\nuniform float usaEsp;\nvarying vec3 vWE;\nvarying vec3 vNE;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n vec4 pE = vec4(transformed, 1.0); vec3 nE0 = objectNormal;\n#ifdef USE_INSTANCING\n pE = instanceMatrix * pE; nE0 = mat3(instanceMatrix) * nE0;\n#endif\n mat4 mE = usaEsp > 0.5 ? mEsp : modelMatrix; vWE = (mE * pE).xyz; vNE = normalize(mat3(mE) * nE0);");   /* (en lo que se mueve, el espolvoreado va pegado a la pieza: con la posición que tenía al empezar) */
-      sh.fragmentShader = "uniform sampler2D texEsp;\nvarying vec3 vWE;\nvarying vec3 vNE;\n" + sh.fragmentShader.replace("#include <map_fragment>", `#include <map_fragment>
+      const anclaE = sh.fragmentShader.includes("#include <map_fragment>") ? "#include <map_fragment>" : "#include <emissivemap_fragment>";   /* (si otro sombreador ya cambió el mapa, el espolvoreado va igual) */
+      sh.fragmentShader = "uniform sampler2D texEsp;\nvarying vec3 vWE;\nvarying vec3 vNE;\n" + sh.fragmentShader.replace(anclaE, `${anclaE}
       { vec3 nE = normalize(vNE), wT = pow(abs(nE), vec3(4.0)); wT /= wT.x + wT.y + wT.z;
         float a = texture2D(texEsp, vWE.zy * 0.16).r * wT.x + texture2D(texEsp, vWE.xz * 0.16).r * wT.y + texture2D(texEsp, vWE.xy * 0.16).r * wT.z;
         float b = texture2D(texEsp, vWE.xz * 0.059 + 0.5).g * wT.y + texture2D(texEsp, (vWE.zy + vWE.xy) * 0.059 + 0.5).g * (1.0 - wT.y);
@@ -6936,12 +6963,12 @@ function alargarHexagono(it, g) {   // el hexágono de un pozo sigue hacia abajo
   const pz = KITS[nombre][+i], m = g.children.find(o => o.isMesh && o.geometry === pz.geo); if (!m) return; if (!pz.geo.boundingBox) pz.geo.computeBoundingBox();
   m.material = matHexPozo(); g.updateMatrixWorld(true); const hL = pz.geo.boundingBox.max.y - pz.geo.boundingBox.min.y, hW = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3()).y, fondoY = alturaTerreno(P.x + P.ro + 0.5, P.z) - 22;
   let bajo = new THREE.Box3().setFromObject(m).min.y;
-  for (let c = 1; c < 12 && bajo > fondoY; c++) { const m2 = new THREE.Mesh(pz.geo, matHexPozo()); m2.position.copy(m.position).add(new THREE.Vector3(0, -c * hL * 0.97, 0)); m2.quaternion.copy(m.quaternion); m2.receiveShadow = true; g.add(m2); bajo -= hW * 0.97; }
+  for (let c = 1; false && c < 12 && bajo > fondoY; c++) {   /* (sin copias: se cortaban con las paredes) */ const m2 = new THREE.Mesh(pz.geo, matHexPozo()); m2.position.copy(m.position).add(new THREE.Vector3(0, -c * hL * 0.97, 0)); m2.quaternion.copy(m.quaternion); m2.receiveShadow = true; g.add(m2); bajo -= hW * 0.97; }
 }
 function recortarPozo(g) {
   const b = new THREE.Box3().setFromObject(g); if (Math.max(b.max.x - b.min.x, b.max.z - b.min.z) > 40) return;   /* (los muros, enteros) */
   const P = POZOS_HEX.filter(P => Math.hypot(Math.max(b.min.x - P.x, 0, P.x - b.max.x), Math.max(b.min.z - P.z, 0, P.z - b.max.z)) < P.ro && !(b.max.x - b.min.x < 2 * P.rh + 1.5 && Math.hypot((b.min.x + b.max.x) / 2 - P.x, (b.min.z + b.max.z) / 2 - P.z) < 1)); if (!P.length) return;   /* (el hexágono mismo, no) */
-  const f = v => v.toFixed(2), corte = P.map(P => `{ float d = length(w - vec2(${f(P.x)}, ${f(P.z)})); if (d > ${f(P.ri)} && d < ${f(P.ro)}) discard; }`).join(" ");
+  const f = v => v.toFixed(2), corte = P.map(P => `{ float d = length(w - vec2(${f(P.x)}, ${f(P.z)})); if (d > ${f(P.ri)} && d < ${f(P.ro)} && vPozoW.y < ${f(alturaTerreno(P.x + P.ro + 0.6, P.z) - 0.2)}) discard; }`).join(" ");   /* (solo lo que queda dentro del hueco, bajo el borde: lo de arriba, entero)*/
   g.traverse(o => { if (!o.isMesh) return; const ms = Array.isArray(o.material) ? o.material : [o.material], nuevos = ms.map(m0 => { const m = m0.clone(), prev = m0.onBeforeCompile, clave = m0.customProgramCacheKey ? m0.customProgramCacheKey() : "";
     m.onBeforeCompile = (sh, r) => { if (prev) prev.call(m, sh, r);
       sh.vertexShader = "varying vec3 vPozoW;\n" + sh.vertexShader.replace("#include <project_vertex>", "#include <project_vertex>\n vec4 pzW = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\n pzW = instanceMatrix * pzW;\n#endif\n vPozoW = (modelMatrix * pzW).xyz;");
